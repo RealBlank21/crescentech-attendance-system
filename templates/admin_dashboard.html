@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Crescentech Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Admin Dashboard - Welcome, {{ user.username }}</h1>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </header>
+        
+        <main class="dashboard-content">
+            <section class="admin-stats">
+                <h2>System Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Staff</h3>
+                        <p class="stat-number">{{ total_staff }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Present Today</h3>
+                        <p class="stat-number">{{ staff_present }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Leaves</h3>
+                        <p class="stat-number">{{ pending_leaves }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="attendance-overview">
+                <h2>Today's Attendance</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Total Hours</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in today_attendance %}
+                            <tr>
+                                <td>{{ entry.username }}</td>
+                                <td>{{ entry.time_in.strftime('%I:%M %p') if entry.time_in else '-' }}</td>
+                                <td>{{ entry.time_out.strftime('%I:%M %p') if entry.time_out else '-' }}</td>
+                                <td>{{ entry.total_time if entry.total_time else '-' }}</td>
+                                <td>{{ entry.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="no-records">No attendance records for today.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="leave-management">
+                <h2>Leave Requests</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Leave Type</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Reason</th>
+                                <th>Document</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in pending_leave_requests %}
+                            <tr>
+                                <td>{{ leave.username }}</td>
+                                <td>{{ leave.leave_type }}</td>
+                                <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ leave.reason }}</td>
+                                <td>
+                                    {% if leave.document_url %}
+                                    <a href="{{ leave.document_url }}" target="_blank">View</a>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td class="status-{{ leave.status.lower() }}">{{ leave.status }}</td>
+                                <td>
+                                    <button class="btn-approve" onclick="updateLeaveStatus('{{ leave.leave_id }}', 'Approved')">Approve</button>
+                                    <button class="btn-reject" onclick="updateLeaveStatus('{{ leave.leave_id }}', 'Rejected')">Reject</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="no-records">No pending leave requests.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="working-hours">
+                <div class="section-header">
+                    <h2>Working Hours Configuration</h2>
+                </div>
+                <div class="working-hours-grid">
+                    {% for config in working_hours %}
+                    <div class="working-hours-card">
+                        <h3>{{ config.day_type }}</h3>
+                        <form class="working-hours-form" onsubmit="updateWorkingHours(event, '{{ config.day_type }}')">
+                            <div class="time-inputs">
+                                <div class="form-group">
+                                    <label for="{{ config.day_type }}_start">Start Time</label>
+                                    <input type="time" id="{{ config.day_type }}_start" name="start_time" 
+                                        value="{{ '%02d:%02d' % (config.start_time.seconds // 3600, (config.start_time.seconds // 60) % 60) if config.start_time else '09:00' }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ config.day_type }}_end">End Time</label>
+                                    <input type="time" id="{{ config.day_type }}_end" name="end_time" 
+                                        value="{{ '%02d:%02d' % (config.end_time.seconds // 3600, (config.end_time.seconds // 60) % 60) if config.end_time else '17:30' }}" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Update</button>
+                        </form>
+                        <p class="last-updated">
+                            Last updated: {{ config.last_updated.strftime('%Y-%m-%d %H:%M') if config.last_updated else 'Never' }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="staff-time-owed">
+                <h2>Staff Time Summary</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Time Owed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff in staff_time_owed %}
+                            <tr>
+                                <td>{{ staff.username }}</td>
+                                <td class="{{ 'negative-time' if staff.total_minutes_owed < 0 else 'positive-time' }}">
+                                    {% set hours = (staff.total_minutes_owed | abs) // 60 %}
+                                    {% set minutes = (staff.total_minutes_owed | abs) % 60 %}
+                                    {{ '+ ' if staff.total_minutes_owed < 0 else '- ' }}{{ hours }} hours {{ minutes }} minutes
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="no-records">No staff records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="add-user-section">
+                <div class="section-header">
+                    <h2>Add New User</h2>
+                </div>
+                <div class="form-container">
+                    <form id="addUserForm" onsubmit="handleAddUser(event)">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="text" id="password" name="password" value="Crescentech@123" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Role</label>
+                            <select id="role" name="role" required>
+                                <option value="Staff">Staff</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary">Add User</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="delete-staff-section">
+                <div class="section-header">
+                    <h2>Delete Staff</h2>
+                </div>
+                <div class="form-container">
+                    <form id="deleteStaffForm" onsubmit="handleDeleteStaff(event)">
+                        <div class="form-group">
+                            <label for="staffToDelete">Select Staff to Delete</label>
+                            <select id="staffToDelete" name="staffToDelete" required>
+                                <option value="">Select a staff member</option>
+                                {% for staff in staff_list %}
+                                    {% if staff.role != 'Admin' %}  <!-- Don't show admins in the list -->
+                                        <option value="{{ staff.user_id }}">{{ staff.username }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-danger">Delete Staff</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function updateLeaveStatus(leaveId, status) {
+            fetch('/update_leave_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    leave_id: leaveId,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function updateWorkingHours(event, dayType) {
+            event.preventDefault();
+            const form = event.target;
+            const startTime = form.querySelector('input[name="start_time"]').value;
+            const endTime = form.querySelector('input[name="end_time"]').value;
+
+            fetch('/update_working_hours', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    day_type: dayType,
+                    start_time: startTime,
+                    end_time: endTime
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function handleAddUser(event) {
+            event.preventDefault();
+            const form = event.target;
+            const username = form.username.value;
+            const email = form.email.value;
+            const password = form.password.value;
+            const role = form.role.value;
+
+            fetch('/add_user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    role: role,
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User added successfully');
+                    form.reset();
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to add user');
+                }
+            });
+        }
+
+        function handleDeleteStaff(event) {
+            event.preventDefault();
+            const form = event.target;
+            const staffId = form.staffToDelete.value;
+            const staffName = form.staffToDelete.options[form.staffToDelete.selectedIndex].text;
+
+            if (!staffId) {
+                alert('Please select a staff member');
+                return;
+            }
+
+            const confirmed = confirm(
+                `WARNING: You are about to delete ${staffName}.\n\n` +
+                'This will permanently delete:\n' +
+                '- User account\n' +
+                '- All timesheet records\n' +
+                '- All leave records\n' +
+                '- All related data\n\n' +
+                'This action cannot be undone. Continue?'
+            );
+
+            if (confirmed) {
+                fetch('/delete_staff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: staffId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Staff member deleted successfully');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Failed to delete staff member');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>

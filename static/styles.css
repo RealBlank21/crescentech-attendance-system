@@ -1,0 +1,617 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+
+:root {
+    --primary-color: #FF225C;
+    --secondary-color: #FFFFFF;
+    --background-color: #ecf0f1;
+    --primary-text-color: #2D2E2E;
+    --secondary-text-color: #FF225C;
+    --font-family: 'Open Sans', Arial, sans-serif;
+}
+
+html, body {
+    background-color: var(--background-color);
+    font-family: var(--font-family);
+    margin: 0px;
+    padding: 0px;
+}
+
+/* Login page styles */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-title {
+    color: var(--primary-text-color);
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--primary-text-color);
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.error-message {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+/* Staff Dashboard styles */
+.dashboard-container {
+    min-height: 100vh;
+    background-color: var(--background-color);
+}
+
+.dashboard-header {
+    background-color: var(--secondary-color);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h1 {
+    color: var(--primary-text-color);
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.btn-logout {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.btn-logout:hover {
+    opacity: 0.9;
+}
+
+.dashboard-content {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.timesheet-section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timesheet-section h2 {
+    color: var(--primary-text-color);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.timesheet-filters {
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group label {
+    color: var(--primary-text-color);
+    font-weight: 500;
+}
+
+.filter-group input[type="date"] {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+}
+
+.btn-filter {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.btn-filter:hover {
+    opacity: 0.9;
+}
+
+.timesheet-table {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f8f9fa;
+    color: var(--primary-text-color);
+    font-weight: 600;
+}
+
+td {
+    color: var(--primary-text-color);
+}
+
+.no-records {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+}
+
+/* Attendance actions styles */
+.attendance-actions {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.time-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn-time {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.btn-time:hover:not(.disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-time.disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.success-message {
+    color: #2ecc71;
+    text-align: center;
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+/* Leave section styles */
+.leave-section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.section-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* so the button aligns to the left */
+    gap: 0.5rem; /* optional spacing between title and button */
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.status-pending {
+    color: #f39c12;
+}
+
+.status-approved {
+    color: #27ae60;
+}
+
+.status-rejected {
+    color: #e74c3c;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--secondary-color);
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--primary-text-color);
+}
+
+.close {
+    color: #aaa;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--primary-text-color);
+}
+
+textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    background-color: white;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: var(--secondary-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-secondary:hover {
+    opacity: 0.9;
+}
+
+/* Notes section styles */
+.notes-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.attendance-note {
+    width: 100%;
+    min-height: 80px;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    resize: vertical;
+}
+
+/* Admin dashboard styles */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-card h3 {
+    color: var(--primary-text-color);
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+}
+
+.stat-number {
+    color: var(--primary-color);
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.table-container {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.btn-approve {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-reject {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-approve:hover, .btn-reject:hover {
+    opacity: 0.9;
+}
+
+.admin-stats h2, .attendance-overview h2, .leave-management h2, .working-hours .section-header h2 {
+    color: var(--primary-text-color);
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.attendance-overview, .leave-management {
+    margin-top: 2rem;
+}
+
+/* Working hours styles */
+.working-hours-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.working-hours-card {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.working-hours-card h3 {
+    color: var(--primary-text-color);
+    margin: 0 0 1.5rem 0;
+}
+
+.working-hours-form {
+    margin-bottom: 1rem;
+}
+
+.time-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.last-updated {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 0.5rem 0 0 0;
+}
+
+/* Time owed styles */
+.time-summary {
+    margin-bottom: 2rem;
+}
+
+.time-owed-card {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.time-owed-card h3 {
+    color: var(--primary-text-color);
+    margin: 0 0 1rem 0;
+}
+
+.time-number {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.time-explanation {
+    color: #666;
+    margin: 0;
+}
+
+.positive-time .time-number {
+    color: #e74c3c;
+}
+
+.negative-time .time-number {
+    color: #27ae60;
+}
+
+.staff-time-owed td {
+    font-size: 1.1rem;
+}
+
+/* Add User section styles */
+.add-user-section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.form-container {
+    max-width: 500px;
+    margin: 1rem auto;
+}
+
+.add-user-section .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.add-user-section input,
+.add-user-section select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    background-color: white;
+}
+
+.add-user-section button {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+/* Delete Staff section styles */
+.delete-staff-section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: var(--secondary-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    margin-top: 1rem;
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
+}

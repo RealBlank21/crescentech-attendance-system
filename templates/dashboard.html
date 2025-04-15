@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Crescentech Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Welcome, {{ user.username }}</h1>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </header>
+        
+        <main class="dashboard-content">
+            <section class="time-summary">
+                <div class="time-owed-card {% if time_owed < 0 %}negative-time{% else %}positive-time{% endif %}">
+                    <h3>Time Balance</h3>
+                    {% set hours = (time_owed | abs) // 60 %}
+                    {% set minutes = (time_owed | abs) % 60 %}
+                    <p class="time-number">{{ '+ ' if time_owed < 0 else '- ' }}{{ hours }} hours {{ minutes }} minutes</p>
+                    <p class="time-explanation">
+                        {% if time_owed > 0 %}
+                        You owe this much time
+                        {% else %}
+                        You have worked extra hours
+                        {% endif %}
+                    </p>
+                </div>
+            </section>
+
+            <section class="attendance-actions">
+                <div class="time-buttons">
+                    <button id="timeInBtn" class="btn-time" onclick="handleTimeIn()">Time In</button>
+                    <button id="timeOutBtn" class="btn-time" onclick="handleTimeOut()" disabled>Time Out</button>
+                </div>
+                <div id="notesSection" class="notes-section" style="display: none;">
+                    <div class="form-group">
+                        <label for="attendanceNote">Note for today:</label>
+                        <textarea id="attendanceNote" class="attendance-note" placeholder="Add a note for today's attendance..."></textarea>
+                        <button class="btn-primary" onclick="saveNote()">Save Note</button>
+                    </div>
+                </div>
+                {% if error_message %}
+                <div class="error-message">{{ error_message }}</div>
+                {% endif %}
+                {% if success_message %}
+                <div class="success-message">{{ success_message }}</div>
+                {% endif %}
+            </section>
+
+            <section class="timesheet-section">
+                <h2>Your Timesheet</h2>
+                <div class="timesheet-filters">
+                    <form method="GET" action="{{ url_for('dashboard') }}">
+                        <div class="filter-group">
+                            <label for="start_date">From:</label>
+                            <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+                            
+                            <label for="end_date">To:</label>
+                            <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+                            
+                            <button type="submit" class="btn-filter">Filter</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="timesheet-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Day</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Total Hours</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in timesheet %}
+                            <tr>
+                                <td>{{ entry.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ entry.date.strftime('%A') }}</td>
+                                <td>{{ entry.time_in.strftime('%I:%M %p') if entry.time_in else '-' }}</td>
+                                <td>{{ entry.time_out.strftime('%I:%M %p') if entry.time_out else '-' }}</td>
+                                <td>{{ entry.total_time if entry.total_time else '-' }}</td>
+                                <td>{{ entry.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="no-records">No timesheet records found for the selected period.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="leave-section">
+                <div class="section-header">
+                    <h2>Your Leave Records</h2>
+                    <button class="btn-primary" onclick="showLeaveForm()">Request Leave</button>
+                </div>
+
+                <div class="leave-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th>Reason</th>
+                                <th>Document</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leave_records %}
+                            <tr>
+                                <td>{{ leave.leave_type }}</td>
+                                <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                                <td class="status-{{ leave.status.lower() }}">{{ leave.status }}</td>
+                                <td>{{ leave.reason }}</td>
+                                <td>
+                                    {% if leave.document_url %}
+                                    <a href="{{ leave.document_url }}" target="_blank">View</a>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="no-records">No leave records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Leave Request Form Modal -->
+                <div id="leaveFormModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Request Leave</h3>
+                            <span class="close" onclick="hideLeaveForm()">&times;</span>
+                        </div>
+                        <form id="leaveForm" method="POST" action="{{ url_for('submit_leave') }}" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="leave_type">Leave Type</label>
+                                <select id="leave_type" name="leave_type" required>
+                                    <option value="Medical">Medical</option>
+                                    <option value="Vacation">Vacation</option>
+                                    <option value="Personal">Personal</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="start_date">Start Date</label>
+                                <input type="date" id="start_date" name="start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="end_date">End Date</label>
+                                <input type="date" id="end_date" name="end_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reason">Reason</label>
+                                <textarea id="reason" name="reason" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="document">Supporting Document (optional)</label>
+                                <input type="file" id="document" name="document">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="hideLeaveForm()">Cancel</button>
+                                <button type="submit" class="btn-primary">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Check initial button states
+        document.addEventListener('DOMContentLoaded', function() {
+            checkButtonStates();
+        });
+
+        function checkButtonStates() {
+            fetch('/check_time_status')
+                .then(response => response.json())
+                .then(data => {
+                    const timeInBtn = document.getElementById('timeInBtn');
+                    const timeOutBtn = document.getElementById('timeOutBtn');
+                    const notesSection = document.getElementById('notesSection');
+
+                    if (data.can_time_in) {
+                        timeInBtn.disabled = false;
+                        timeInBtn.classList.remove('disabled');
+                        notesSection.style.display = 'none';
+                    } else {
+                        timeInBtn.disabled = true;
+                        timeInBtn.classList.add('disabled');
+                        notesSection.style.display = 'block';
+                        
+                        // If we have a note for today, display it
+                        if (data.current_note) {
+                            document.getElementById('attendanceNote').value = data.current_note;
+                        }
+                    }
+
+                    if (data.can_time_out) {
+                        timeOutBtn.disabled = false;
+                        timeOutBtn.classList.remove('disabled');
+                    } else {
+                        timeOutBtn.disabled = true;
+                        timeOutBtn.classList.add('disabled');
+                    }
+                });
+        }
+
+        function handleTimeIn() {
+            fetch('/time_in', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        function handleTimeOut() {
+            fetch('/time_out', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        function saveNote() {
+            const note = document.getElementById('attendanceNote').value;
+            fetch('/save_note', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ note: note })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message temporarily
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'success-message';
+                    successMsg.textContent = 'Note saved successfully';
+                    document.getElementById('notesSection').appendChild(successMsg);
+                    setTimeout(() => successMsg.remove(), 3000);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        // Leave form modal functions
+        function showLeaveForm() {
+            document.getElementById('leaveFormModal').style.display = 'block';
+        }
+
+        function hideLeaveForm() {
+            document.getElementById('leaveFormModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('leaveFormModal');
+            if (event.target == modal) {
+                hideLeaveForm();
+            }
+        }
+    </script>
+</body>
+</html>
