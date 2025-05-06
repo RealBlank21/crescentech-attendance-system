@@ -615,3 +615,66 @@ select {
 .btn-danger:hover {
     opacity: 0.9;
 }
+
+/* Staff Timesheets styles */
+.staff-timesheets {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.timesheet-controls {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.staff-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.staff-select-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.staff-select-btn:hover {
+    background: #e0e0e0;
+}
+
+.staff-select-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.date-range-picker {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.date-range-picker .form-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.loading-message, .error-message, .no-records {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.error-message {
+    color: #dc3545;
+}

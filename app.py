@@ -156,7 +156,8 @@ def admin_dashboard():
                          pending_leave_requests=pending_leave_requests,
                          working_hours=working_hours,
                          staff_time_owed=staff_time_owed,
-                         staff_list=staff_list)
+                         staff_list=staff_list,
+                         today=datetime.now())
 
 @app.route('/update_working_hours', methods=['POST'])
 @login_required
@@ -405,6 +406,62 @@ def delete_staff():
         'success': success,
         'message': 'Staff member deleted successfully' if success else 'Failed to delete staff member'
     })
+
+@app.route('/get_staff_timesheet')
+@login_required
+def get_staff_timesheet():
+    # Verify that the user is an admin
+    user, _ = auth_manager.require_auth(session['token'])
+    if user['role'] != 'Admin':
+        return jsonify({
+            'success': False,
+            'message': 'Unauthorized access'
+        })
+
+    staff_id = request.args.get('staff_id')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    if not all([staff_id, start_date, end_date]):
+        return jsonify({
+            'success': False,
+            'message': 'Missing required parameters'
+        })
+    
+    try:
+        # Convert string dates to datetime objects
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        # Use our existing database method to get timesheet entries
+        timesheet_entries = db.get_user_timesheet(staff_id, start_date, end_date)
+        
+        # Format the timesheet data
+        timesheet_data = []
+        for entry in timesheet_entries:
+            status = 'Present'
+            if entry['notes'] and 'leave' in entry['notes'].lower():
+                status = 'On Leave'
+            
+            timesheet_data.append({
+                'date': entry['date'].strftime('%Y-%m-%d'),
+                'time_in': entry['time_in'].strftime('%I:%M %p') if entry['time_in'] else None,
+                'time_out': entry['time_out'].strftime('%I:%M %p') if entry['time_out'] else None,
+                'total_hours': str(entry['total_time']) if entry['total_time'] else None,
+                'status': status,
+                'notes': entry['notes'] or '-'
+            })
+        
+        return jsonify({
+            'success': True,
+            'timesheet': timesheet_data
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
 
 @app.route('/logout')
 def logout():

@@ -35,4 +35,4 @@ ENV FLASK_ENV=production
 EXPOSE 5000
 
 # Command to run when container starts
-CMD ["sh", "-c", "python database_setup.py && python app.py"]
+CMD ["sh", "-c", "python database_setup.py && python seed_data_2.py && python app.py"]

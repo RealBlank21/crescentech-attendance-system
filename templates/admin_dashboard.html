@@ -142,6 +142,57 @@
                 </div>
             </section>
 
+            <section class="staff-timesheets">
+                <h2>Staff Timesheets</h2>
+                <div class="timesheet-controls">
+                    <div class="staff-buttons">
+                        {% for staff in staff_list %}
+                            {% if staff.role != 'Admin' %}
+                                <button 
+                                    class="staff-select-btn {% if loop.first %}active{% endif %}"
+                                    data-staff-id="{{ staff.user_id }}"
+                                    onclick="selectStaff(this, '{{ staff.user_id }}')">
+                                    {{ staff.username }}
+                                </button>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="date-range-picker">
+                        <div class="form-group">
+                            <label for="start_date">From:</label>
+                            <input type="date" id="start_date" name="start_date" 
+                                value="{{ today.strftime('%Y-%m-%d') }}"
+                                onchange="updateTimesheetTable()">
+                        </div>
+                        <div class="form-group">
+                            <label for="end_date">To:</label>
+                            <input type="date" id="end_date" name="end_date" 
+                                value="{{ today.strftime('%Y-%m-%d') }}"
+                                onchange="updateTimesheetTable()">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="timesheet-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Total Hours</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timesheet-body">
+                            <tr>
+                                <td colspan="6" class="loading-message">Select a staff member and date range to view timesheet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <section class="staff-time-owed">
                 <h2>Staff Time Summary</h2>
                 <div class="table-container">
@@ -348,6 +399,50 @@
                     }
                 });
             }
+        }
+
+        function selectStaff(button, staffId) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.staff-select-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Add active class to clicked button
+            button.classList.add('active');
+            updateTimesheetTable();
+        }
+
+        function updateTimesheetTable() {
+            const activeStaffBtn = document.querySelector('.staff-select-btn.active');
+            if (!activeStaffBtn) return;
+
+            const staffId = activeStaffBtn.dataset.staffId;
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+
+            const tbody = document.getElementById('timesheet-body');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading-message">Loading...</td></tr>';
+
+            fetch(`/get_staff_timesheet?staff_id=${staffId}&start_date=${startDate}&end_date=${endDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.timesheet.length > 0) {
+                        tbody.innerHTML = data.timesheet.map(entry => `
+                            <tr>
+                                <td>${entry.date}</td>
+                                <td>${entry.time_in || '-'}</td>
+                                <td>${entry.time_out || '-'}</td>
+                                <td>${entry.total_hours || '-'}</td>
+                                <td>${entry.status}</td>
+                                <td>${entry.notes || '-'}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="no-records">No timesheet records found for selected period</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="6" class="error-message">Error loading timesheet data</td></tr>';
+                });
         }
     </script>
 </body>
