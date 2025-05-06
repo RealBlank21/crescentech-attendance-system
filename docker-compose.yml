@@ -7,6 +7,8 @@ services:
     environment:
       MYSQL_DATABASE: crescentech-db
       MYSQL_ROOT_PASSWORD: CrEsCeNtEch@3240
+      MYSQL_USER: crescentuser
+      MYSQL_PASSWORD: CrEsCeNtEch@3240
       MYSQL_LOG_CONSOLE: "true"
     command: 
       - --default-authentication-plugin=mysql_native_password
@@ -19,7 +21,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       timeout: 5s
       retries: 10
       interval: 5s
@@ -31,7 +33,7 @@ services:
       - "5000:5000"
     environment:
       - MYSQL_HOST=db
-      - MYSQL_USERNAME=root
+      - MYSQL_USERNAME=crescentuser
       - MYSQL_PASSWORD=CrEsCeNtEch@3240
       - MYSQL_DATABASE=crescentech-db
       - MYSQL_PORT=3306

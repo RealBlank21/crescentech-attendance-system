@@ -303,3 +303,4 @@ if __name__ == "__main__":
     drop_database()
     create_database()
     create_tables()
+    insert_user("admin", "realblank21@gmail.com", "admin123", "Admin")
