@@ -678,3 +678,11 @@ select {
 .error-message {
     color: #dc3545;
 }
+
+.report-generation {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+}

@@ -64,6 +64,27 @@
                 </div>
             </section>
 
+            <section class="report-generation">
+                <div class="section-header">
+                    <h2>Timesheet Report</h2>
+                </div>
+                <div class="form-container">
+                    <form id="generateReportForm" onsubmit="handleGenerateReport(event)">
+                        <div class="date-range-picker">
+                            <div class="form-group">
+                                <label for="report_start_date">From:</label>
+                                <input type="date" id="report_start_date" name="report_start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="report_end_date">To:</label>
+                                <input type="date" id="report_end_date" name="report_end_date" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Generate Report</button>
+                    </form>
+                </div>
+            </section>
+
             <section class="leave-management">
                 <h2>Leave Requests</h2>
                 <div class="table-container">
@@ -236,10 +257,14 @@
                         <div class="form-group">
                             <label for="email">Email</label>
                             <input type="email" id="email" name="email" required>
-                        </div>
+                        </div>                        
                         <div class="form-group">
                             <label for="password">Password</label>
                             <input type="text" id="password" name="password" value="Crescentech@123" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employment_date">Employment Date</label>
+                            <input type="date" id="employment_date" name="employment_date" required>
                         </div>
                         <div class="form-group">
                             <label for="role">Role</label>
@@ -324,14 +349,13 @@
                     alert(data.message);
                 }
             });
-        }
-
-        function handleAddUser(event) {
+        }        function handleAddUser(event) {
             event.preventDefault();
             const form = event.target;
             const username = form.username.value;
             const email = form.email.value;
             const password = form.password.value;
+            const employment_date = form.employment_date.value;
             const role = form.role.value;
 
             fetch('/add_user', {
@@ -343,6 +367,7 @@
                     username: username,
                     email: email,
                     password: password,
+                    employment_date: employment_date,
                     role: role,
                 })
             })
@@ -443,6 +468,60 @@
                 .catch(error => {
                     tbody.innerHTML = '<tr><td colspan="6" class="error-message">Error loading timesheet data</td></tr>';
                 });
+        }
+
+        function handleGenerateReport(event) {
+            event.preventDefault();
+            const form = event.target;
+            const startDate = form.report_start_date.value;
+            const endDate = form.report_end_date.value;
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            // Show loading state
+            const button = form.querySelector('button');
+            const originalText = button.textContent;
+            button.textContent = 'Generating Report...';
+            button.disabled = true;
+
+            fetch('/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to generate report');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create a download link for the PDF
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `timesheet_report_${startDate}_to_${endDate}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                alert('Error generating report: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                button.textContent = originalText;
+                button.disabled = false;
+            });
         }
     </script>
 </body>

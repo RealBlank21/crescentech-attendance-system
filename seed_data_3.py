@@ -1,5 +1,6 @@
 from database_setup import insert_user, insert_timesheet, connect_to_database, hash_password
 from datetime import datetime, timedelta
+import random
 
 # Test users data with employment dates
 users = [
@@ -8,35 +9,35 @@ users = [
         "email": "realblank21@gmail.com",
         "password": "admin123",
         "role": "Admin",
-        "employment_date": "2023-01-01"
+        "employment_date": "2025-02-25"
     },
     {
         "username": "Adli",
         "email": "realblanket21@gmail.com",
         "password": "password123",
         "role": "Staff",
-        "employment_date": "2023-02-15"
+        "employment_date": "2025-02-25"
     },
     {
         "username": "Maisarah",
         "email": "Maisarah@gmail.com",
         "password": "password123",
         "role": "Staff",
-        "employment_date": "2023-03-01"
+        "employment_date": "2025-02-25"
     },
     {
         "username": "Wani",
         "email": "Wani@gmail.com",
         "password": "password123",
         "role": "Staff",
-        "employment_date": "2023-04-15"
+        "employment_date": "2025-02-25"
     },
     {
         "username": "Amal",
         "email": "Amal@gmail.com",
         "password": "password123",
         "role": "Staff",
-        "employment_date": "2023-05-01"
+        "employment_date": "2025-02-25"
     }
 ]
 
@@ -88,8 +89,9 @@ def create_users():
     return user_ids
 
 def create_timesheet_entries(user_ids):
-    """Create 3 months of timesheet entries for each user with perfect attendance"""
-    start_date = datetime.now() - timedelta(days=90)
+    """Create timesheet entries with randomized patterns"""
+    # Start from employment date
+    start_date = datetime.strptime("2025-02-25", "%Y-%m-%d")
     end_date = datetime.now()
     current_date = start_date
 
@@ -104,14 +106,29 @@ def create_timesheet_entries(user_ids):
                 if username == "Adli (Admin)":  # Skip timesheet entries for admin
                     continue
 
+                # Random patterns for each user
+                pattern = random.random()
+                
+                if pattern < 0.05:  # 5% chance of absence
+                    continue
+                elif pattern < 0.15:  # 10% chance of late arrival
+                    time_in = work_start + timedelta(minutes=random.randint(15, 45))
+                    time_out = work_end + timedelta(minutes=random.randint(0, 30))
+                elif pattern < 0.25:  # 10% chance of early arrival
+                    time_in = work_start - timedelta(minutes=random.randint(15, 30))
+                    time_out = work_end - timedelta(minutes=random.randint(0, 15))
+                else:  # 75% chance of normal attendance
+                    time_in = work_start + timedelta(minutes=random.randint(-5, 5))
+                    time_out = work_end + timedelta(minutes=random.randint(-5, 5))
+
                 try:
                     cursor.execute("""
                         INSERT INTO Timesheet (user_id, time_in, time_out, date, notes)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (
                         user_id,
-                        work_start,
-                        work_end,
+                        time_in,
+                        time_out,
                         current_date.date(),
                         "Regular working day"
                     ))
@@ -126,81 +143,28 @@ def create_timesheet_entries(user_ids):
     conn.close()
 
 def create_leave_records(user_ids):
-    """Create leave records for staff members with perfect examples"""
+    """Create randomized leave records for staff members"""
+    leave_types = ['Medical', 'Vacation', 'Personal', 'Other']
+    statuses = ['Pending', 'Approved', 'Rejected']
+    
     conn = connect_to_database()
     cursor = conn.cursor()
     
-    # Example leave records for each staff member
-    leave_records = [
-        # Adli's leaves
-        {
-            "username": "Adli",
-            "leaves": [
-                {
-                    "type": "Vacation",
-                    "start_date": datetime.now() - timedelta(days=30),
-                    "end_date": datetime.now() - timedelta(days=28),
-                    "status": "Approved",
-                    "reason": "Family vacation"
-                },
-                {
-                    "type": "Medical",
-                    "start_date": datetime.now() - timedelta(days=15),
-                    "end_date": datetime.now() - timedelta(days=14),
-                    "status": "Approved",
-                    "reason": "Medical appointment"
-                }
-            ]
-        },
-        # Maisarah's leaves
-        {
-            "username": "Maisarah",
-            "leaves": [
-                {
-                    "type": "Personal",
-                    "start_date": datetime.now() - timedelta(days=45),
-                    "end_date": datetime.now() - timedelta(days=44),
-                    "status": "Approved",
-                    "reason": "Personal matters"
-                }
-            ]
-        },
-        # Wani's leaves
-        {
-            "username": "Wani",
-            "leaves": [
-                {
-                    "type": "Vacation",
-                    "start_date": datetime.now() - timedelta(days=60),
-                    "end_date": datetime.now() - timedelta(days=55),
-                    "status": "Approved",
-                    "reason": "Annual leave"
-                }
-            ]
-        },
-        # Amal's leaves
-        {
-            "username": "Amal",
-            "leaves": [
-                {
-                    "type": "Medical",
-                    "start_date": datetime.now() - timedelta(days=20),
-                    "end_date": datetime.now() - timedelta(days=18),
-                    "status": "Approved",
-                    "reason": "Medical leave"
-                }
-            ]
-        }
-    ]
-    
-    for record in leave_records:
-        username = record["username"]
-        user_id = user_ids.get(username)
-        
-        if not user_id:
+    for username, user_id in user_ids.items():
+        if username == "Adli (Admin)":  # Skip leave records for admin
             continue
             
-        for leave in record["leaves"]:
+        # Create 3-5 leave records per staff
+        for _ in range(random.randint(3, 5)):
+            # Random start date between employment date and now
+            start_date = datetime.strptime("2025-02-25", "%Y-%m-%d") + timedelta(days=random.randint(1, 60))
+            # Random duration between 1-7 days
+            end_date = start_date + timedelta(days=random.randint(1, 7))
+            
+            # Ensure end date doesn't exceed current date
+            if end_date > datetime.now():
+                end_date = datetime.now()
+            
             try:
                 cursor.execute("""
                     INSERT INTO LeaveRecord 
@@ -208,11 +172,11 @@ def create_leave_records(user_ids):
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (
                     user_id,
-                    leave["type"],
-                    leave["start_date"].date(),
-                    leave["end_date"].date(),
-                    leave["status"],
-                    leave["reason"]
+                    random.choice(leave_types),
+                    start_date.date(),
+                    end_date.date(),
+                    random.choice(statuses),
+                    f"{random.choice(leave_types)} leave request for {username}"
                 ))
             except Exception as e:
                 print(f"Error creating leave record for {username}: {e}")
@@ -251,7 +215,7 @@ def update_working_hours():
     conn.close()
 
 def main():
-    print("Starting to seed data (perfect case example)...")
+    print("Starting to seed data (randomized patterns)...")
     
     # Create users and get their IDs
     print("Creating users...")
@@ -272,4 +236,4 @@ def main():
     print("Data seeding completed!")
 
 if __name__ == "__main__":
-    main()
+    main() 

@@ -73,17 +73,18 @@ class DatabaseOperations:
     def get_user_by_email(self, email):
         query = "SELECT * FROM User WHERE email = %s"
         success, result = self.execute_query(query, (email,))
-        return result[0] if success and result else None
-
+        return result[0] if success and result else None    
+    
     def get_user_timesheet(self, user_id, start_date=None, end_date=None):
         query = """
-            SELECT * FROM Timesheet 
-            WHERE user_id = %s
-            AND (%s IS NULL OR date >= %s)
-            AND (%s IS NULL OR date <= %s)
-            ORDER BY date DESC, time_in DESC
+            SELECT t.* FROM Timesheet t
+            JOIN User u ON t.user_id = u.user_id
+            WHERE t.user_id = %s
+            AND t.date >= COALESCE(%s, u.employment_date)
+            AND (%s IS NULL OR t.date <= %s)
+            ORDER BY t.date DESC, t.time_in DESC
         """
-        success, result = self.execute_query(query, (user_id, start_date, start_date, end_date, end_date))
+        success, result = self.execute_query(query, (user_id, start_date, end_date, end_date))
         return result if success else []
 
     def get_user_leaves(self, user_id, status=None):
@@ -332,15 +333,19 @@ class DatabaseOperations:
             
         Returns:
             int: Total minutes owed
-        """
-        # Set default date range if not provided
+        """        # Set default date range if not provided
         if not end_date:
             end_date = datetime.now().date()
         if not start_date:
-            # Calculate start date to get last 6 working days (Mon-Sat)
-            # If today is Sunday, go back 7 days to get last Saturday
-            days_to_subtract = 7 if end_date.isoweekday() == 7 else 6
-            start_date = end_date - timedelta(days=days_to_subtract)
+            # Get user's employment date
+            query = "SELECT employment_date FROM User WHERE user_id = %s"
+            success, result = self.execute_query(query, (user_id,))
+            if success and result:
+                start_date = result[0]['employment_date']
+            else:
+                # Fallback to last 6 working days if employment date not found
+                days_to_subtract = 7 if end_date.isoweekday() == 7 else 6
+                start_date = end_date - timedelta(days=days_to_subtract)
             
         total_minutes_owed = 0
         current_date = start_date
@@ -397,7 +402,7 @@ class DatabaseOperations:
         return total_minutes_owed
 
     def get_all_staff_time_owed(self):
-        """Get time owed for all staff members from their first to last timesheet entry
+        """Get time owed for all staff members from employment date to last timesheet entry
         
         For missing dates:
         - Sundays are ignored
@@ -408,8 +413,12 @@ class DatabaseOperations:
             - username: str
             - total_minutes_owed: int
         """
-        # Get all staff users
-        query = "SELECT user_id, username FROM User WHERE role = 'Staff'"
+        # Get all staff users with their employment dates
+        query = """
+            SELECT user_id, username, employment_date 
+            FROM User 
+            WHERE role = 'Staff'
+        """
         success, staff_users = self.execute_query(query)
         
         if not success:
@@ -418,19 +427,19 @@ class DatabaseOperations:
         result = []
         
         for user in staff_users:
-            # Get first and last timesheet dates for this user
+            # Get the last timesheet date for this user
             date_range_query = """
-                SELECT MIN(date) as first_date, MAX(date) as last_date
+                SELECT MAX(date) as last_date
                 FROM Timesheet
                 WHERE user_id = %s
             """
             success, date_range = self.execute_query(date_range_query, (user['user_id'],))
             
-            if not success or not date_range or not date_range[0]['first_date']:
+            if not success:
                 continue
                 
-            start_date = date_range[0]['first_date']
-            end_date = date_range[0]['last_date']
+            start_date = user['employment_date']
+            end_date = date_range[0]['last_date'] if date_range[0]['last_date'] else datetime.now().date()
             
             # Get all timesheet entries within the date range
             timesheet_query = """

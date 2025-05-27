@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from app.authentication import AuthenticationManager
 from app.db import DatabaseOperations
 from functools import wraps
@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime, timedelta
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from io import BytesIO
 
 load_dotenv()
 
@@ -353,12 +358,24 @@ def add_user():
     email = data.get('email')
     password = data.get('password')
     role = data.get('role')
+    employment_date_str = data.get('employment_date')
+
+    print("Employement Date: " + employment_date_str)
 
     # Validate required fields
-    if not all([username, email, password, role]):
+    if not all([username, email, password, role, employment_date_str]):
         return jsonify({
             'success': False,
             'message': 'Missing required fields'
+        })
+    
+    try:
+        # Convert string date to datetime.date object
+        employment_date = datetime.strptime(employment_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid employment date format'
         })
 
     # Register the new user
@@ -366,7 +383,8 @@ def add_user():
         username=username,
         email=email,
         password=password,
-        role=role
+        role=role,
+        employment_date=employment_date
     )
 
     if not success:
@@ -467,6 +485,159 @@ def get_staff_timesheet():
 def logout():
     session.pop('token', None)
     return redirect(url_for('login'))
+
+@app.route('/generate_report', methods=['POST'])
+@login_required
+def generate_report():
+    user, _ = auth_manager.require_auth(session['token'])
+    
+    # Verify that the user is an admin
+    if user['role'] != 'Admin':
+        return jsonify({
+            'success': False,
+            'message': 'Unauthorized access'
+        }), 403
+    
+    data = request.get_json()
+    print("Received data:", data)  # Debug print
+    
+    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
+    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d').date()
+    print(f"Date range: {start_date} to {end_date}")  # Debug print
+    
+    # Create a BytesIO buffer to store the PDF
+    buffer = BytesIO()
+    
+    # Create the PDF document
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Add title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        spaceAfter=30
+    )
+    elements.append(Paragraph(f"Timesheet Report ({start_date} to {end_date})", title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Get all staff users
+    query = "SELECT user_id, username FROM User WHERE role = 'Staff'"
+    success, staff_users = db.execute_query(query)
+    print(f"Staff users found: {len(staff_users) if success and staff_users else 0}")  # Debug print
+    
+    if not success or not staff_users:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to fetch staff users'
+        }), 500
+    
+    # Calculate time owed and total hours worked for each staff member in the specified date range
+    time_owed_data = [['Staff Name', 'Time Owed', 'Total Hours']]
+    for staff in staff_users:
+        # Calculate time owed for the specified date range
+        time_owed = db.calculate_time_owed(staff['user_id'], start_date, end_date)
+        hours = abs(time_owed) // 60
+        minutes = abs(time_owed) % 60
+        time_str = f"{'+ ' if time_owed < 0 else '- '}{hours} hours {minutes} minutes"
+        
+        # Calculate total hours worked
+        query = """
+            SELECT 
+                SUM(TIME_TO_SEC(TIMEDIFF(time_out, time_in))) / 3600 as total_hours
+            FROM Timesheet 
+            WHERE user_id = %s 
+            AND date BETWEEN %s AND %s
+            AND time_in IS NOT NULL 
+            AND time_out IS NOT NULL
+        """
+        success, result = db.execute_query(query, (staff['user_id'], start_date, end_date))
+        total_hours = result[0]['total_hours'] if success and result and result[0]['total_hours'] is not None else 0
+        total_hours_str = f"{total_hours:.2f} hours"
+        
+        time_owed_data.append([staff['username'], time_str, total_hours_str])
+    
+    time_owed_table = Table(time_owed_data, colWidths=[200, 200, 100])
+    time_owed_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF225C')),  # Updated color
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(Paragraph("Staff Time Summary", styles['Heading2']))
+    elements.append(Spacer(1, 10))
+    elements.append(time_owed_table)
+    elements.append(Spacer(1, 30))
+    
+    # Get leave records for all staff
+    query = """
+        SELECT u.username, l.start_date, l.end_date, l.leave_type, l.status
+        FROM LeaveRecord l
+        JOIN User u ON l.user_id = u.user_id
+        WHERE l.start_date BETWEEN %s AND %s
+        OR l.end_date BETWEEN %s AND %s
+        OR (l.start_date <= %s AND l.end_date >= %s)
+        ORDER BY l.start_date
+    """
+    print("Executing leave records query with params:", (start_date, end_date, start_date, end_date, start_date, end_date))  # Debug print
+    success, leave_records = db.execute_query(query, (start_date, end_date, start_date, end_date, start_date, end_date))
+    print(f"Leave records query success: {success}")  # Debug print
+    print(f"Number of leave records found: {len(leave_records) if success and leave_records else 0}")  # Debug print
+    
+    if success and leave_records:
+        # Create leave records table
+        leave_data = [['Staff Name', 'Leave Type', 'Start Date', 'End Date', 'Status']]
+        for record in leave_records:
+            leave_data.append([
+                record['username'],
+                record['leave_type'],
+                record['start_date'].strftime('%Y-%m-%d'),
+                record['end_date'].strftime('%Y-%m-%d'),
+                record['status']
+            ])
+        
+        leave_table = Table(leave_data, colWidths=[150, 100, 100, 100, 100])
+        leave_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF225C')),  # Updated color
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(Paragraph("Leave Records", styles['Heading2']))
+        elements.append(Spacer(1, 10))
+        elements.append(leave_table)
+    
+    # Build the PDF
+    doc.build(elements)
+    
+    # Move to the beginning of the BytesIO buffer
+    buffer.seek(0)
+    
+    # Return the PDF file
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'timesheet_report_{start_date}_to_{end_date}.pdf',
+        mimetype='application/pdf'
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False)

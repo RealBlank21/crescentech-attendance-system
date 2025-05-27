@@ -55,9 +55,8 @@ class AuthenticationManager:
             return None, "Invalid password"
 
         token = self.generate_token(user['user_id'], user['role'])
-        return token, None
-
-    def register_user(self, username, email, password, role='Staff', profile_picture_url=None):
+        return token, None    
+    def register_user(self, username, email, password, role='Staff', employment_date=None, profile_picture_url=None):
         """Register a new user"""
         # Check if email already exists
         existing_user = self.db.get_user_by_email(email)
@@ -69,12 +68,12 @@ class AuthenticationManager:
 
         # Insert the new user
         query = """
-            INSERT INTO User (username, email, password, role, profile_picture_url)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO User (username, email, password, role, employment_date, profile_picture_url)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
         success, _ = self.db.execute_query(
             query, 
-            (username, email, hashed_password, role, profile_picture_url)
+            (username, email, hashed_password, role, employment_date, profile_picture_url)
         )
 
         if not success:

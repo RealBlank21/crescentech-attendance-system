@@ -2,6 +2,7 @@ import mysql.connector
 from dotenv import load_dotenv
 import os
 import bcrypt
+from datetime import date
 load_dotenv()
 
 MYSQL_USERNAME = os.getenv("MYSQL_USERNAME")
@@ -113,13 +114,13 @@ def create_tables():
 
         cursor = conn.cursor()
 
-        create_users_table_query = """
-        CREATE TABLE IF NOT EXISTS User (
+        create_users_table_query = """        CREATE TABLE IF NOT EXISTS User (
             user_id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(255) UNIQUE NOT NULL,
             email VARCHAR(255) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             profile_picture_url VARCHAR(2048),
+            employment_date DATE NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             role ENUM('Admin', 'Staff')
         )
@@ -199,7 +200,7 @@ def create_tables():
         if conn:
             conn.close()
 
-def insert_user(username, email, password, role, profile_picture_url=None):
+def insert_user(username, email, password, role, employment_date, profile_picture_url=None):
     conn = None
     cursor = None
 
@@ -214,10 +215,10 @@ def insert_user(username, email, password, role, profile_picture_url=None):
 
         hashed_password = hash_password(password)
         insert_user_query = """
-            INSERT INTO User (username, email, password, role, profile_picture_url)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO User (username, email, password, role, employment_date, profile_picture_url)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(insert_user_query, (username, email, hashed_password, role, profile_picture_url))
+        cursor.execute(insert_user_query, (username, email, hashed_password, role, employment_date, profile_picture_url))
 
         conn.commit()
         print("User inserted successfully.")
@@ -303,4 +304,4 @@ if __name__ == "__main__":
     drop_database()
     create_database()
     create_tables()
-    insert_user("admin", "realblank21@gmail.com", "admin123", "Admin")
+    insert_user("admin", "realblank21@gmail.com", "admin123", "Admin", date(2024, 1, 1))
