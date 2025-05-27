@@ -42,8 +42,7 @@ services:
     volumes:
       - ./static/uploads:/app/static/uploads
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
