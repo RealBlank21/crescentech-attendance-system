@@ -32,9 +32,7 @@ services:
         condition: on-failure
 
   web:
-    image: yourusername/yourwebapp:latest # <-- IMPORTANT: Use the pre-built image here
-    # build: . # <-- Remove this for Swarm deployment
-    # restart: always # Swarm handles restart policy
+    image: adlicrescentech/crescentech-attendance-system:latest
     ports:
       - "5000:5000"
     environment:
