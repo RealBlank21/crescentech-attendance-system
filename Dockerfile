@@ -28,11 +28,12 @@ RUN mkdir -p static/uploads && \
 # Switch to non-root user
 USER appuser
 
-# Set Flask to run in production mode
+# Set production environment
 ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
 
-# Expose port 5000
-EXPOSE 5000
+# Expose port 8000 (standard for gunicorn)
+EXPOSE 8000
 
 # Command to run when container starts
-CMD ["sh", "-c", "python database_setup.py && python app.py"]
+CMD ["sh", "-c", "python database_setup.py && gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2 wsgi:app"]
