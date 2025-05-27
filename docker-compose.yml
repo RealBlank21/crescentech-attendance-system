@@ -1,9 +1,9 @@
-version: '3.8'
+version: '3.8' # Or higher if you're using very recent Swarm features
 
 services:
   db:
     image: mysql:8.0
-    restart: always
+    # restart: always # Swarm handles restart policy via deploy section
     environment:
       MYSQL_DATABASE: crescentech-db
       MYSQL_ROOT_PASSWORD: CrEsCeNtEch@3240
@@ -25,10 +25,16 @@ services:
       timeout: 5s
       retries: 10
       interval: 5s
+    deploy: # This is how Swarm manages restarts and replicas
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   web:
-    build: .
-    restart: always
+    image: yourusername/yourwebapp:latest # <-- IMPORTANT: Use the pre-built image here
+    # build: . # <-- Remove this for Swarm deployment
+    # restart: always # Swarm handles restart policy
     ports:
       - "5000:5000"
     environment:
@@ -41,7 +47,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./static/uploads:/app/static/uploads
-    depends_on:
+    depends_on: # In Swarm, use "deploy.depends_on" or ensure proper healthchecks and service startup order
       - db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
@@ -49,6 +55,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      # For Swarm, you might also want to add constraints or placement preferences here.
 
 volumes:
   mysql_data:
