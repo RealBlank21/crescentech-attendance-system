@@ -10,7 +10,7 @@ services:
       MYSQL_USER: crescentuser
       MYSQL_PASSWORD: CrEsCeNtEch@3240
       MYSQL_LOG_CONSOLE: "true"
-    command: 
+    command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -21,7 +21,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
       timeout: 5s
       retries: 10
       interval: 5s
