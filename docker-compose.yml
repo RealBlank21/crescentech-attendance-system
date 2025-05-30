@@ -1,15 +1,15 @@
-version: '3.8' # Or higher if you're using very recent Swarm features
+version: '3.8' # Or higher
 
 services:
   db:
     image: mysql:8.0
-    # restart: always # Swarm handles restart policy via deploy section
     environment:
       MYSQL_DATABASE: crescentech-db
+      # IMPORTANT: For production, use Docker secrets for passwords instead of plaintext environment variables.
       MYSQL_ROOT_PASSWORD: CrEsCeNtEch@3240
       MYSQL_USER: crescentuser
       MYSQL_PASSWORD: CrEsCeNtEch@3240
-      MYSQL_LOG_CONSOLE: "true"
+      MYSQL_LOG_CONSOLE: "true" # Useful for debugging
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
@@ -17,49 +17,75 @@ services:
       - --skip-character-set-client-handshake
       - --max-allowed-packet=128M
     ports:
-      - "3306:3306"
+      - "3306:3306" # Exposes DB port. Ensure this is secured if accessible externally.
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql # Persists MySQL data
     healthcheck:
+      # This command checks if the MySQL server is responsive.
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
-      timeout: 5s
-      retries: 10
-      interval: 5s
-    deploy: # This is how Swarm manages restarts and replicas
+      timeout: 5s    # How long to wait for the command to complete.
+      retries: 10    # Number of times to retry before marking as unhealthy.
+      interval: 5s   # How often to run the health check.
+      start_period: 30s # Optional: Grace period for the service to start before health checks begin failing tasks.
+                        # MySQL might take some time to initialize.
+    deploy:
       mode: replicated
       replicas: 1
       restart_policy:
-        condition: on-failure
+        condition: on-failure # Swarm will restart the service if it fails (e.g., becomes unhealthy).
 
   web:
     image: adlicrescentech/crescentech-attendance-system:latest
     ports:
       - "5000:5000"
     environment:
-      - MYSQL_HOST=db
+      - MYSQL_HOST=db # Service discovery: 'db' resolves to the DB container's IP in the Docker network.
       - MYSQL_USERNAME=crescentuser
+      # IMPORTANT: For production, use Docker secrets for passwords.
       - MYSQL_PASSWORD=CrEsCeNtEch@3240
       - MYSQL_DATABASE=crescentech-db
       - MYSQL_PORT=3306
       - FLASK_ENV=production
-      - PYTHONUNBUFFERED=1
+      - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal/logs without buffering.
     volumes:
-      - ./static/uploads:/app/static/uploads
-    depends_on: # In Swarm, use "deploy.depends_on" or ensure proper healthchecks and service startup order
-      - db
+      - ./static/uploads:/app/static/uploads # Mounts local uploads directory into the container.
+                                             # Ensure this path is correct relative to your compose file or use a named volume.
+    depends_on:
+      - db # For Docker Compose v3.x (including Swarm deployments):
+           # - This ensures that the 'db' service is *started* before the 'web' service.
+           # - It does NOT guarantee that 'db' is "healthy" or "ready" before 'web' starts its application logic.
+           # - In Swarm, the 'web' application itself MUST be resilient. It should implement
+           #   retry mechanisms with backoff to connect to the database if it's not immediately available.
+           #   The 'db' service's healthcheck above is used by Swarm to manage the 'db' service's lifecycle
+           #   (e.g., restarting it if it becomes unhealthy), not to block the 'web' service's tasks from starting.
+    command: > # Using '>' for a multi-line command, executed via sh -c
+      sh -c "
+        echo 'Web service waiting for 30 seconds before starting application...';
+        sleep 30;
+        echo 'Attempting to start the web application...';
+        # IMPORTANT: Replace the line below with the actual command used to start your Flask application.
+        # For example, if you use gunicorn:
+        # exec gunicorn --bind 0.0.0.0:5000 your_wsgi_module:app
+        # Or if your image's default CMD was 'flask run':
+        # exec flask run --host=0.0.0.0 --port=5000
+        # For now, this is a placeholder:
+        echo 'Please replace the next line with your actual application start command in docker-compose.yml';
+        exec echo 'Web application would start here.'
+      "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      # This command checks if your web application is responding.
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"] # Adjust path if your app has a specific health endpoint.
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 40s # Grace period for the web application to initialize before health checks start.
+                       # Note: This start_period for the healthcheck should be longer than any initial sleep/wait time.
     deploy:
       mode: replicated
       replicas: 1
       restart_policy:
         condition: on-failure
-      # For Swarm, you might also want to add constraints or placement preferences here.
 
 volumes:
   mysql_data:
-    driver: local
+    driver: local # Explicitly defining the driver is good practice.
