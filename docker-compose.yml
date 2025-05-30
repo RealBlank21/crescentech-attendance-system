@@ -21,53 +21,42 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql # Persists MySQL data
     healthcheck:
-      # This command checks if the MySQL server is responsive.
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
-      timeout: 5s    # How long to wait for the command to complete.
-      retries: 10    # Number of times to retry before marking as unhealthy.
-      interval: 5s   # How often to run the health check.
-      start_period: 30s # Optional: Grace period for the service to start before health checks begin failing tasks.
-                        # MySQL might take some time to initialize.
+      timeout: 5s
+      retries: 10
+      interval: 5s
+      start_period: 30s
     deploy:
       mode: replicated
       replicas: 1
       restart_policy:
-        condition: on-failure # Swarm will restart the service if it fails (e.g., becomes unhealthy).
+        condition: on-failure
 
   web:
-    image: adlicrescentech/crescentech-attendance-system:latest
+    build: . # Tells Docker Compose to build an image from the Dockerfile in the current directory
     ports:
-      - "5000:5000"
+      - "5000:8000" # Host port 5000 maps to container port 8000 (as Gunicorn binds to 8000 in your Dockerfile CMD)
     environment:
-      - MYSQL_HOST=db # Service discovery: 'db' resolves to the DB container's IP in the Docker network.
+      - MYSQL_HOST=db
       - MYSQL_USERNAME=crescentuser
-      # IMPORTANT: For production, use Docker secrets for passwords.
       - MYSQL_PASSWORD=CrEsCeNtEch@3240
       - MYSQL_DATABASE=crescentech-db
       - MYSQL_PORT=3306
       - FLASK_ENV=production
-      - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal/logs without buffering.
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./static/uploads:/app/static/uploads # Mounts local uploads directory into the container.
-                                             # Ensure this path is correct relative to your compose file or use a named volume.
+      - ./static/uploads:/app/static/uploads
     depends_on:
       db:
         condition: service_healthy
-    command: > # Using '>' for a multi-line command, executed via sh -c
-      sh -c "
-        echo 'Web service waiting for 30 seconds after DB is healthy before starting application...';
-        sleep 30;
-        echo 'Attempting to start the web application with Gunicorn...';
-        exec gunicorn --bind 0.0.0.0:5000 wsgi:app
-      "
+    # 'command' directive is removed to allow Dockerfile's CMD to execute
     healthcheck:
-      # This command checks if your web application is responding.
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"] # Adjust path if your app has a specific health endpoint.
+      # This healthcheck will now ping port 8000 inside the container
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"] # Adjust path if your app has a specific health endpoint.
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s # Grace period for the web application to initialize before health checks start.
-                       # Note: This start_period for the healthcheck should be longer than any initial sleep/wait time.
+      start_period: 40s
     deploy:
       mode: replicated
       replicas: 1
@@ -76,4 +65,4 @@ services:
 
 volumes:
   mysql_data:
-    driver: local # Explicitly defining the driver is good practice.
+    driver: local
