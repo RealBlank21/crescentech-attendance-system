@@ -36,4 +36,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Command to run when container starts
-CMD ["sh", "-c", "python database_setup.py && gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2 app:app"]
+CMD ["sh", "-c", "python database_setup.py && gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2 main:app"]
