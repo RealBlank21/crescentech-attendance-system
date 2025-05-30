@@ -51,26 +51,14 @@ services:
       - ./static/uploads:/app/static/uploads # Mounts local uploads directory into the container.
                                              # Ensure this path is correct relative to your compose file or use a named volume.
     depends_on:
-      - db # For Docker Compose v3.x (including Swarm deployments):
-           # - This ensures that the 'db' service is *started* before the 'web' service.
-           # - It does NOT guarantee that 'db' is "healthy" or "ready" before 'web' starts its application logic.
-           # - In Swarm, the 'web' application itself MUST be resilient. It should implement
-           #   retry mechanisms with backoff to connect to the database if it's not immediately available.
-           #   The 'db' service's healthcheck above is used by Swarm to manage the 'db' service's lifecycle
-           #   (e.g., restarting it if it becomes unhealthy), not to block the 'web' service's tasks from starting.
+      db:
+        condition: service_healthy
     command: > # Using '>' for a multi-line command, executed via sh -c
       sh -c "
-        echo 'Web service waiting for 30 seconds before starting application...';
+        echo 'Web service waiting for 30 seconds after DB is healthy before starting application...';
         sleep 30;
-        echo 'Attempting to start the web application...';
-        # IMPORTANT: Replace the line below with the actual command used to start your Flask application.
-        # For example, if you use gunicorn:
-        # exec gunicorn --bind 0.0.0.0:5000 your_wsgi_module:app
-        # Or if your image's default CMD was 'flask run':
-        # exec flask run --host=0.0.0.0 --port=5000
-        # For now, this is a placeholder:
-        echo 'Please replace the next line with your actual application start command in docker-compose.yml';
-        exec echo 'Web application would start here.'
+        echo 'Attempting to start the web application with Gunicorn...';
+        exec gunicorn --bind 0.0.0.0:5000 wsgi:app
       "
     healthcheck:
       # This command checks if your web application is responding.
